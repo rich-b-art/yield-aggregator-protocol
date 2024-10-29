@@ -19,3 +19,18 @@
 (define-data-var performance-fee uint u200) ;; 2% represented as basis points
 (define-data-var management-fee uint u100)  ;; 1% represented as basis points
 (define-data-var max-strategies uint u10)
+
+
+;; Data Maps
+(define-map Strategies
+    { strategy-id: uint }
+    {
+        name: (string-ascii 64),
+        protocol: (string-ascii 64),
+        enabled: bool,
+        tvl: uint,
+        apy: uint,
+        risk-score: uint,
+        last-harvest: uint
+    }
+)
