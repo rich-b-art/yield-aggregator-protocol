@@ -262,3 +262,20 @@
         (ok true)
     )
 )
+
+;; Helper Functions
+(define-private (is-contract-owner)
+    (is-eq tx-sender (var-get contract-owner))
+)
+
+(define-private (calculate-shares (amount uint))
+    (let
+        (
+            (total-supply (var-get total-value-locked))
+        )
+        (if (is-eq total-supply u0)
+            amount
+            (/ (* amount u1000000) total-supply)
+        )
+    )
+)
