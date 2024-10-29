@@ -34,3 +34,12 @@
         last-harvest: uint
     }
 )
+
+(define-map UserDeposits
+    { user: principal }
+    {
+        total-deposit: uint,
+        share-tokens: uint,
+        last-deposit-block: uint
+    }
+)
