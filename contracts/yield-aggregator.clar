@@ -115,3 +115,51 @@
         acc
     )
 )
+
+;; Public Functions
+(define-public (deposit (amount uint))
+    (let
+        (
+            (user tx-sender)
+            (current-deposit (default-to { total-deposit: u0, share-tokens: u0, last-deposit-block: u0 }
+                (map-get? UserDeposits { user: user })))
+        )
+        (asserts! (not (var-get emergency-shutdown)) ERR-EMERGENCY-SHUTDOWN)
+        (asserts! (> amount u0) ERR-INVALID-AMOUNT)
+        
+        ;; Transfer tokens to contract
+        (try! (contract-call?
+            'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.token-contract
+            transfer
+            amount
+            tx-sender
+            (as-contract tx-sender)
+            none
+        ))
+        
+        ;; Calculate share tokens
+        (let
+            (
+                (new-shares (calculate-shares amount))
+                (new-total-deposit (+ (get total-deposit current-deposit) amount))
+            )
+            ;; Update user deposits
+            (map-set UserDeposits
+                { user: user }
+                {
+                    total-deposit: new-total-deposit,
+                    share-tokens: (+ (get share-tokens current-deposit) new-shares),
+                    last-deposit-block: block-height
+                }
+            )
+            
+            ;; Update TVL
+            (var-set total-value-locked (+ (var-get total-value-locked) amount))
+            
+            ;; Auto-allocate to best strategy
+            (try! (allocate-to-best-strategy amount))
+            
+            (ok true)
+        )
+    )
+)
