@@ -20,7 +20,6 @@
 (define-data-var management-fee uint u100)  ;; 1% represented as basis points
 (define-data-var max-strategies uint u10)
 
-
 ;; Data Maps
 (define-map Strategies
     { strategy-id: uint }
@@ -65,11 +64,9 @@
     (map-get? UserDeposits { user: user })
 )
 
-
 (define-read-only (get-total-tvl)
     (var-get total-value-locked)
 )
-
 
 (define-read-only (calculate-best-strategy (amount uint))
     (let
@@ -84,7 +81,7 @@
 
 (define-read-only (get-active-strategies)
     (filter is-strategy-active (map unwrap-strategy (get-strategy-list)))
-
+)
 
 ;; Private Functions
 (define-private (is-strategy-active (strategy {
@@ -280,7 +277,6 @@
     )
 )
 
-
 (define-private (calculate-withdrawal-amount (share-amount uint))
     (let
         (
@@ -299,6 +295,26 @@
             (ok true)
             (try! (reallocate-funds (get best-strategy best-strategy) amount))
         )
+        (ok true)
+    )
+)
+
+(define-private (reallocate-funds (strategy-id uint) (amount uint))
+    (let
+        (
+            (strategy (unwrap! (map-get? Strategies { strategy-id: strategy-id }) ERR-STRATEGY-NOT-FOUND))
+            (allocation (unwrap! (map-get? StrategyAllocations { strategy-id: strategy-id }) ERR-STRATEGY-NOT-FOUND))
+        )
+        (asserts! (get enabled strategy) ERR-STRATEGY-DISABLED)
+        (asserts! (>= amount (get min-deposit allocation)) ERR-INVALID-AMOUNT)
+        (asserts! (<= amount (get max-deposit allocation)) ERR-INVALID-AMOUNT)
+        
+        ;; Update strategy TVL
+        (map-set Strategies
+            { strategy-id: strategy-id }
+            (merge strategy { tvl: (+ (get tvl strategy) amount) })
+        )
+        
         (ok true)
     )
 )
