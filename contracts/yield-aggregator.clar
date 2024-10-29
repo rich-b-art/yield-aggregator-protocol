@@ -240,3 +240,25 @@
         (ok true)
     )
 )
+
+(define-public (update-strategy-apy (strategy-id uint) (new-apy uint))
+    (begin
+        (asserts! (is-contract-owner) ERR-NOT-AUTHORIZED)
+        (asserts! (map-get? Strategies { strategy-id: strategy-id }) ERR-STRATEGY-NOT-FOUND)
+        
+        (map-set Strategies
+            { strategy-id: strategy-id }
+            (merge (unwrap! (map-get? Strategies { strategy-id: strategy-id }) ERR-STRATEGY-NOT-FOUND)
+                  { apy: new-apy })
+        )
+        (ok true)
+    )
+)
+
+(define-public (toggle-emergency-shutdown)
+    (begin
+        (asserts! (is-contract-owner) ERR-NOT-AUTHORIZED)
+        (var-set emergency-shutdown (not (var-get emergency-shutdown)))
+        (ok true)
+    )
+)
