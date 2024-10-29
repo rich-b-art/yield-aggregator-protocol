@@ -289,3 +289,16 @@
         (/ (* share-amount (var-get total-value-locked)) u1000000)
     )
 )
+
+(define-private (allocate-to-best-strategy (amount uint))
+    (let
+        (
+            (best-strategy (calculate-best-strategy amount))
+        )
+        (if (is-eq (get best-strategy best-strategy) u0)
+            (ok true)
+            (try! (reallocate-funds (get best-strategy best-strategy) amount))
+        )
+        (ok true)
+    )
+)
