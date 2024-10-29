@@ -60,3 +60,7 @@
 (define-read-only (get-strategy-info (strategy-id uint))
     (map-get? Strategies { strategy-id: strategy-id })
 )
+
+(define-read-only (get-user-info (user principal))
+    (map-get? UserDeposits { user: user })
+)
