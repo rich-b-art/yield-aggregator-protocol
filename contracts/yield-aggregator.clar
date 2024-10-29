@@ -69,3 +69,15 @@
 (define-read-only (get-total-tvl)
     (var-get total-value-locked)
 )
+
+
+(define-read-only (calculate-best-strategy (amount uint))
+    (let
+        (
+            (strategies (get-active-strategies))
+            (best-apy u0)
+            (best-strategy u0)
+        )
+        (fold calculate-highest-apy strategies (tuple (best-apy: u0) (best-strategy: u0)))
+    )
+)
