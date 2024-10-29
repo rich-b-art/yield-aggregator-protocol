@@ -81,3 +81,7 @@
         (fold calculate-highest-apy strategies (tuple (best-apy: u0) (best-strategy: u0)))
     )
 )
+
+(define-read-only (get-active-strategies)
+    (filter is-strategy-active (map unwrap-strategy (get-strategy-list)))
+)
