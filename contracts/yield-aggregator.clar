@@ -279,3 +279,13 @@
         )
     )
 )
+
+
+(define-private (calculate-withdrawal-amount (share-amount uint))
+    (let
+        (
+            (total-shares (var-get total-value-locked))
+        )
+        (/ (* share-amount (var-get total-value-locked)) u1000000)
+    )
+)
