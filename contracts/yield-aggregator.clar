@@ -84,4 +84,15 @@
 
 (define-read-only (get-active-strategies)
     (filter is-strategy-active (map unwrap-strategy (get-strategy-list)))
+
+
+;; Private Functions
+(define-private (is-strategy-active (strategy {
+        strategy-id: uint,
+        enabled: bool,
+        tvl: uint,
+        apy: uint,
+        risk-score: uint
+    }))
+    (and (get enabled strategy) (> (get apy strategy) u0))
 )
