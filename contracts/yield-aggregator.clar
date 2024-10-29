@@ -64,3 +64,8 @@
 (define-read-only (get-user-info (user principal))
     (map-get? UserDeposits { user: user })
 )
+
+
+(define-read-only (get-total-tvl)
+    (var-get total-value-locked)
+)
