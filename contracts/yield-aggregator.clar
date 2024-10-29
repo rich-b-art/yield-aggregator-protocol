@@ -43,3 +43,12 @@
         last-deposit-block: uint
     }
 )
+
+(define-map StrategyAllocations
+    { strategy-id: uint }
+    {
+        allocation-percentage: uint,
+        min-deposit: uint,
+        max-deposit: uint
+    }
+)
