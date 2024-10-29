@@ -163,3 +163,45 @@
         )
     )
 )
+
+(define-public (withdraw (share-amount uint))
+    (let
+        (
+            (user tx-sender)
+            (user-deposit (unwrap! (map-get? UserDeposits { user: user }) ERR-INSUFFICIENT-BALANCE))
+        )
+        (asserts! (<= share-amount (get share-tokens user-deposit)) ERR-INSUFFICIENT-BALANCE)
+        
+        ;; Calculate withdrawal amount
+        (let
+            (
+                (withdrawal-amount (calculate-withdrawal-amount share-amount))
+                (new-shares (- (get share-tokens user-deposit) share-amount))
+            )
+            ;; Update user deposits
+            (map-set UserDeposits
+                { user: user }
+                {
+                    total-deposit: (- (get total-deposit user-deposit) withdrawal-amount),
+                    share-tokens: new-shares,
+                    last-deposit-block: (get last-deposit-block user-deposit)
+                }
+            )
+            
+            ;; Update TVL
+            (var-set total-value-locked (- (var-get total-value-locked) withdrawal-amount))
+            
+            ;; Transfer tokens back to user
+            (try! (as-contract (contract-call?
+                'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.token-contract
+                transfer
+                withdrawal-amount
+                tx-sender
+                user
+                none
+            )))
+            
+            (ok withdrawal-amount)
+        )
+    )
+)
