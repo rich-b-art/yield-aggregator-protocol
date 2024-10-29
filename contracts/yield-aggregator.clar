@@ -96,3 +96,22 @@
     }))
     (and (get enabled strategy) (> (get apy strategy) u0))
 )
+
+(define-private (calculate-highest-apy (strategy {
+        strategy-id: uint,
+        enabled: bool,
+        tvl: uint,
+        apy: uint,
+        risk-score: uint
+    }) (acc { best-apy: uint, best-strategy: uint }))
+    (if (and
+            (get enabled strategy)
+            (> (get apy strategy) (get best-apy acc))
+        )
+        (tuple
+            (best-apy: (get apy strategy))
+            (best-strategy: (get strategy-id strategy))
+        )
+        acc
+    )
+)
