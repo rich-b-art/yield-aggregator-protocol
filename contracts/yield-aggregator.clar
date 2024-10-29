@@ -11,3 +11,11 @@
 (define-constant ERR-MAX-STRATEGIES-REACHED (err u106))
 (define-constant ERR-SLIPPAGE-TOO-HIGH (err u107))
 (define-constant ERR-EMERGENCY-SHUTDOWN (err u108))
+
+;; Data Variables
+(define-data-var contract-owner principal tx-sender)
+(define-data-var emergency-shutdown bool false)
+(define-data-var total-value-locked uint u0)
+(define-data-var performance-fee uint u200) ;; 2% represented as basis points
+(define-data-var management-fee uint u100)  ;; 1% represented as basis points
+(define-data-var max-strategies uint u10)
