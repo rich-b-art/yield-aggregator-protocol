@@ -1,7 +1,11 @@
 ;; Title: Yield Aggregator Protocol
 ;; Description: A yield optimization protocol that automatically allocates funds across different yield farming opportunities
 
+;; Define contract name
+(impl-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
+
 ;; Constants and Error Codes
+(define-constant contract-name "yield-aggregator")
 (define-constant ERR-NOT-AUTHORIZED (err u100))
 (define-constant ERR-INVALID-AMOUNT (err u101))
 (define-constant ERR-INSUFFICIENT-BALANCE (err u102))
@@ -11,6 +15,7 @@
 (define-constant ERR-MAX-STRATEGIES-REACHED (err u106))
 (define-constant ERR-SLIPPAGE-TOO-HIGH (err u107))
 (define-constant ERR-EMERGENCY-SHUTDOWN (err u108))
+(define-constant ERR-TOKEN-NOT-SET (err u109))
 
 ;; Data Variables
 (define-data-var contract-owner principal tx-sender)
@@ -19,13 +24,14 @@
 (define-data-var performance-fee uint u200) ;; 2% represented as basis points
 (define-data-var management-fee uint u100)  ;; 1% represented as basis points
 (define-data-var max-strategies uint u10)
+(define-data-var token-contract (optional principal) none)
 
 ;; Data Maps
 (define-map Strategies
     { strategy-id: uint }
     {
-        name: (string-ascii 64),
-        protocol: (string-ascii 64),
+        name: (string-utf8 64),
+        protocol: (string-utf8 64),
         enabled: bool,
         tvl: uint,
         apy: uint,
@@ -52,10 +58,11 @@
     }
 )
 
-;; SIP-010 Token Interface
-(impl-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
-
 ;; Read-only Functions
+(define-read-only (get-strategy-list)
+    (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10)
+)
+
 (define-read-only (get-strategy-info (strategy-id uint))
     (map-get? Strategies { strategy-id: strategy-id })
 )
@@ -68,6 +75,10 @@
     (var-get total-value-locked)
 )
 
+(define-read-only (get-token-contract)
+    (var-get token-contract)
+)
+
 (define-read-only (calculate-best-strategy (amount uint))
     (let
         (
@@ -75,12 +86,16 @@
             (best-apy u0)
             (best-strategy u0)
         )
-        (fold calculate-highest-apy strategies (tuple (best-apy: u0) (best-strategy: u0)))
+        (unwrap! (element-at strategies u0) (tuple (best-apy u0) (best-strategy u0)))
     )
 )
 
 (define-read-only (get-active-strategies)
-    (filter is-strategy-active (map unwrap-strategy (get-strategy-list)))
+    (let
+        ((strategy-1 (unwrap-strategy u1))
+         (strategy-2 (unwrap-strategy u2)))
+        (filter is-strategy-active (list strategy-1 strategy-2))
+    )
 )
 
 ;; Private Functions
@@ -100,14 +115,14 @@
         tvl: uint,
         apy: uint,
         risk-score: uint
-    }) (acc { best-apy: uint, best-strategy: uint }))
+    }) (acc {best-apy: uint, best-strategy: uint}))
     (if (and
             (get enabled strategy)
             (> (get apy strategy) (get best-apy acc))
         )
-        (tuple
-            (best-apy: (get apy strategy))
-            (best-strategy: (get strategy-id strategy))
+        (tuple 
+            (best-apy (get apy strategy))
+            (best-strategy (get strategy-id strategy))
         )
         acc
     )
@@ -120,27 +135,23 @@
             (user tx-sender)
             (current-deposit (default-to { total-deposit: u0, share-tokens: u0, last-deposit-block: u0 }
                 (map-get? UserDeposits { user: user })))
+            (token (unwrap! (var-get token-contract) ERR-TOKEN-NOT-SET))
         )
         (asserts! (not (var-get emergency-shutdown)) ERR-EMERGENCY-SHUTDOWN)
         (asserts! (> amount u0) ERR-INVALID-AMOUNT)
         
         ;; Transfer tokens to contract
-        (try! (contract-call?
-            'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.token-contract
-            transfer
+        (try! (contract-call? token transfer
             amount
             tx-sender
             (as-contract tx-sender)
-            none
-        ))
+            none))
         
-        ;; Calculate share tokens
         (let
             (
                 (new-shares (calculate-shares amount))
                 (new-total-deposit (+ (get total-deposit current-deposit) amount))
             )
-            ;; Update user deposits
             (map-set UserDeposits
                 { user: user }
                 {
@@ -150,10 +161,8 @@
                 }
             )
             
-            ;; Update TVL
             (var-set total-value-locked (+ (var-get total-value-locked) amount))
             
-            ;; Auto-allocate to best strategy
             (try! (allocate-to-best-strategy amount))
             
             (ok true)
@@ -166,16 +175,15 @@
         (
             (user tx-sender)
             (user-deposit (unwrap! (map-get? UserDeposits { user: user }) ERR-INSUFFICIENT-BALANCE))
+            (token (unwrap! (var-get token-contract) ERR-TOKEN-NOT-SET))
         )
         (asserts! (<= share-amount (get share-tokens user-deposit)) ERR-INSUFFICIENT-BALANCE)
         
-        ;; Calculate withdrawal amount
         (let
             (
                 (withdrawal-amount (calculate-withdrawal-amount share-amount))
                 (new-shares (- (get share-tokens user-deposit) share-amount))
             )
-            ;; Update user deposits
             (map-set UserDeposits
                 { user: user }
                 {
@@ -185,18 +193,14 @@
                 }
             )
             
-            ;; Update TVL
             (var-set total-value-locked (- (var-get total-value-locked) withdrawal-amount))
             
             ;; Transfer tokens back to user
-            (try! (as-contract (contract-call?
-                'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.token-contract
-                transfer
+            (try! (as-contract (contract-call? token transfer
                 withdrawal-amount
                 tx-sender
                 user
-                none
-            )))
+                none)))
             
             (ok withdrawal-amount)
         )
@@ -204,7 +208,7 @@
 )
 
 ;; Admin Functions
-(define-public (add-strategy (name (string-ascii 64)) (protocol (string-ascii 64)) (min-deposit uint) (max-deposit uint))
+(define-public (add-strategy (name (string-utf8 64)) (protocol (string-utf8 64)) (min-deposit uint) (max-deposit uint))
     (let
         (
             (strategy-count (len (get-strategy-list)))
@@ -256,6 +260,14 @@
     (begin
         (asserts! (is-contract-owner) ERR-NOT-AUTHORIZED)
         (var-set emergency-shutdown (not (var-get emergency-shutdown)))
+        (ok true)
+    )
+)
+
+(define-public (set-token-contract (new-token principal))
+    (begin
+        (asserts! (is-contract-owner) ERR-NOT-AUTHORIZED)
+        (var-set token-contract (some new-token))
         (ok true)
     )
 )
@@ -316,5 +328,42 @@
         )
         
         (ok true)
+    )
+)
+
+;; Convert strategy ID to full strategy info
+(define-private (unwrap-strategy (strategy-id uint))
+    (let
+        (
+            (strategy (map-get? Strategies { strategy-id: strategy-id }))
+        )
+        (if (is-some strategy)
+            (let
+                (
+                    (name (get name (unwrap! strategy)))
+                    (protocol (get protocol (unwrap! strategy)))
+                )
+                {
+                    strategy-id: strategy-id,
+                    name: name,
+                    protocol: protocol,
+                    enabled: (get enabled (unwrap! strategy)),
+                    tvl: (get tvl (unwrap! strategy)),
+                    apy: (get apy (unwrap! strategy)),
+                    risk-score: (get risk-score (unwrap! strategy)),
+                    last-harvest: (get last-harvest (unwrap! strategy))
+                }
+            )
+            {
+                strategy-id: strategy-id,
+                name: (as-max-len? "default-name" 64),
+                protocol: (as-max-len? "default-protocol" 64),
+                enabled: false,
+                tvl: u0,
+                apy: u0,
+                risk-score: u0,
+                last-harvest: u0
+            }
+        )
     )
 )
