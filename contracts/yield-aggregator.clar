@@ -340,24 +340,23 @@
         (if (is-some strategy)
             (let
                 (
-                    (name (get name (unwrap! strategy)))
-                    (protocol (get protocol (unwrap! strategy)))
+                    (strategy-info (unwrap-panic strategy))
                 )
                 {
                     strategy-id: strategy-id,
-                    name: name,
-                    protocol: protocol,
-                    enabled: (get enabled (unwrap! strategy)),
-                    tvl: (get tvl (unwrap! strategy)),
-                    apy: (get apy (unwrap! strategy)),
-                    risk-score: (get risk-score (unwrap! strategy)),
-                    last-harvest: (get last-harvest (unwrap! strategy))
+                    name: (get name strategy-info),
+                    protocol: (get protocol strategy-info),
+                    enabled: (get enabled strategy-info),
+                    tvl: (get tvl strategy-info),
+                    apy: (get apy strategy-info),
+                    risk-score: (get risk-score strategy-info),
+                    last-harvest: (get last-harvest strategy-info)
                 }
             )
             {
                 strategy-id: strategy-id,
-                name: (as-max-len? "default-name" 64),
-                protocol: (as-max-len? "default-protocol" 64),
+                name: u"default-name-utf8",          ;; Ensure string-utf8 64 type
+                protocol: u"default-protocol-utf8",  ;; Ensure string-utf8 64 type
                 enabled: false,
                 tvl: u0,
                 apy: u0,
